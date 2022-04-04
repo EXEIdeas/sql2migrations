@@ -14,6 +14,10 @@ Wait few sec...
 - Download your Migration Files".
 Download one by one or .zip at once
 
+## Check It Online Now
+
+View it Live on [https://exeideas.github.io/sql2migrations/](https://exeideas.github.io/sql2migrations/)
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 

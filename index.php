@@ -38,7 +38,7 @@
 						<ul class="list-styled">
 							<li>Click on "Generate Migrations".
 								<ul>
-									<li>Wait few sec...</li>
+									<li>Wait few sec and follow the steps...</li>
 								</ul>
 							</li>
 						</ul>
@@ -48,7 +48,7 @@
 						<ul class="list-styled">
 							<li>Download your Migration Files".
 								<ul>
-									<li>Download one by one or .zip at once</li>
+									<li>Download .zip at once</li>
 								</ul>
 							</li>
 						</ul>

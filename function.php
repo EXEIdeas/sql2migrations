@@ -120,8 +120,12 @@ if($_POST["Function"] == "GenerateMigration" ){
 	// https://www.w3schools.com/mysql/mysql_datatypes.asp
 	$sqlDatatypes = array("char","varchar","binary","varbinary","tinyblob","tinytext","text","blob","mediumtext","mediumblob","longtext","longblob","enum","set","bit","tinyint","bool","boolean","smallint","mediumint","int","integer","bigint","float","float","double","decimal","dec","date","datetime","timestamp","time","year");
 	
-	// Loop Over All Array One By One
+	/*
+	** Create And Write All Database Table Migrations
+	*/
+	$i = 1;
 	foreach ($allTables as $singleTableArray) {
+		// Loop Over All Array One By One
 		$singleTableArray[0];
 		$finalContentToWrite = "";
 		$tableName = strtok(substr($singleTableArray[0],strpos($singleTableArray[0],"`")+1),"`");	// Get String Between `` Characters
@@ -129,10 +133,11 @@ if($_POST["Function"] == "GenerateMigration" ){
 		array_shift($singleTableArray);
 		array_pop($singleTableArray);
 		$finalContentToWrite = '<?php
+	use Illuminate\Support\Facades\Schema;
 	use Illuminate\Database\Migrations\Migration;
 	use Illuminate\Database\Schema\Blueprint;
 	
-	class Create_'.$tableName.' extends Migration {
+	class '.makeClassName($tableName).''.$i.' extends Migration {
 	
 		/**
 		* Run the migrations.
@@ -144,6 +149,7 @@ if($_POST["Function"] == "GenerateMigration" ){
 			Schema::create("'.$tableName.'", function(Blueprint $table)
 			{
 				';
+			$j = 1;
 			foreach ($singleTableArray as $singleTableLine) {
 				// Remove Start/End Spaces
 				$singleTableLine = trim($singleTableLine);
@@ -277,9 +283,9 @@ if($_POST["Function"] == "GenerateMigration" ){
 						$unsigned = "->unsigned()";
 					}
 					// Check If The DEFAULT Value Is NULL
-					$default = "->default()";
+					$default = "";
 					if(strpos($singleTableLine, "DEFAULT NULL,") !== false){
-						$default = "->default()";
+						$default = "";
 					} else if(strpos($singleTableLine, "DEFAULT '") !== false){
 						$str_default = $singleTableLine;
 						$str_default = substr($str_default,strpos($str_default,"DEFAULT '"),strlen($str_default));
@@ -294,10 +300,19 @@ if($_POST["Function"] == "GenerateMigration" ){
 						$nullable = "->nullable()";
 					} 
 					// Write The Final Laravel Style Migration Rulei
-					//	https://www.codegrepper.com/code-examples/php/laravel+migration+data+types			
-				$finalContentToWrite .= '$table->'.$currentDataType.'("'.$columnName.'"'.$columnSize.')'.$nullable.''.$unsigned.''.$default.';
+					//	https://www.codegrepper.com/code-examples/php/laravel+migration+data+types
+					if($currentDataType == "bigIncrements" || $currentDataType == "bigInteger" || $currentDataType == "binary" || $currentDataType == "boolean" || $currentDataType == "date" || $currentDataType == "dateTime" || $currentDataType == "float" || $currentDataType == "increments" || $currentDataType == "integer" || $currentDataType == "longText" || $currentDataType == "mediumInteger" || $currentDataType == "mediumText" || $currentDataType == "morphs" || $currentDataType == "nullableTimestamps" || $currentDataType == "smallInteger" || $currentDataType == "tinyInteger" || $currentDataType == "text" || $currentDataType == "time" || $currentDataType == "timestamp"){
+						$finalContentToWrite .= '$table->'.$currentDataType.'("'.$columnName.'")'.$nullable.''.$unsigned.';
 				';
+					} else if($currentDataType == "decimal" || $currentDataType == "double"){
+						$finalContentToWrite .= '$table->'.$currentDataType.'("'.$columnName.'"'.str_replace('"', '', $columnSize).')'.$nullable.''.$unsigned.';
+				';
+					} else {					
+						$finalContentToWrite .= '$table->'.$currentDataType.'("'.$columnName.'"'.$columnSize.')'.$nullable.''.$unsigned.''.$default.';
+				';
+					}
 				}
+				$j++;
 			}
 			$finalContentToWrite .= '//$table->timestamps();
 				//$table->softDeletes();
@@ -319,15 +334,47 @@ if($_POST["Function"] == "GenerateMigration" ){
 	}
 ?>';
 		// Create A File And Write The Code
-		$fp = fopen("migrations/".$tableName.".php","wb");
-		fwrite($fp,$finalContentToWrite);
-		fclose($fp);
+		if($tableName != "migrations"){
+			$fp = fopen("migrations/".date('Y_m_d_His')."_".$tableName."_".$i.".php","wb");
+			fwrite($fp,$finalContentToWrite);
+			fclose($fp);
+		}		
 		// Create A File And Write The Code
-		foreach ($singleTableArray as $singleTable) {
-			//echo $singleTable;
-			// Pick Up The Data Of Single Table
-		}
+		$i++;
 	}
+	/*
+	** Create And Write All Database Table Migrations
+	*/
+	
+	/*
+	** Create And Write Database Updated migrations.sql File
+	*/
+	$finalContentToWrite = "";
+	$finalContentToWrite = 'CREATE TABLE IF NOT EXISTS `migrations` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `migration` varchar(255) NOT NULL,
+  `batch` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+);
+';
+	$directory = "migrations/";
+	$phpfiles = glob($directory . "*.php");
+	$i = 1;
+	foreach($phpfiles as $phpfile)
+	{
+$finalContentToWrite .= "INSERT INTO `migrations` (`id`, `migration`, `batch`) values('".$i."','".basename($phpfile)."',1);
+";
+		$i++;
+	}
+	// Create A File And Write The Code
+	$fp = fopen("migrations.sql","wb");
+	fwrite($fp,$finalContentToWrite);
+	fclose($fp);
+	// Create A File And Write The Code
+	/*
+	** Create And Write Database Updated migrations.sql File
+	*/
+	
 	
 	echo '<div class="alert alert-success d-flex align-items-center my-3" role="alert">
 		<svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Success:">
@@ -336,18 +383,20 @@ if($_POST["Function"] == "GenerateMigration" ){
 		<div>
 			Hurry! The File <b>'.htmlspecialchars( basename( $_FILES["sqlFile"]["name"])).'</b> Is Successfully Converted In Laravel Migrations.
 		</div>
-	</div>';
+	</div>
+	';
 	
 	// Show All File Name And Link To Download
 	echo '<div class="alert alert-success align-items-center my-3 output_div" role="alert">
 		<h5>List Of Laravel Migration Files:</h5>
-		<p><a href="download.php" title="Click Here To Download All In ZIP"><b>&#10173; Download All Migrations In ZIP</b></a></p>
+		<p><a href="download.php" title="Click Here To Download All In ZIP"><b>&#10173; Download All Migrations In ZIP</b></a> | <a href="migrations.sql" download title="Click Here To Download Updated migrations.sql" class="link-success"><b>&#10173; Download migrations.sql</b></a> </p>
+		<i><b>Note: </b>`migrations` Table migration.php is not generated as you have to Download it from above and run directly in Database first.</i><br/><br/>
 		<ol>';
 		$directory = "migrations/";
 		$phpfiles = glob($directory . "*.php");
 		foreach($phpfiles as $phpfile)
 		{
-		echo "<li><a href=$phpfile download title='Click Here To Download'>".basename($phpfile)."</a></li>";
+		echo "<li>".basename($phpfile)."</li>";
 		}
 	echo '</ol>
 	</div>';
@@ -392,15 +441,17 @@ function getCountIndexOfArray_Prefix($incomingArray, $desiredPrefix){
 	}
 	return $tempIndex;
 }
-// Function to check string starting
-// with given substring
+/*
+**	FUNCTION: To check the string is starting with given substring or not
+*/
 function startsWith ($string, $startString)
 {
     $len = strlen($startString);
     return (substr($string, 0, $len) === $startString);
 }
-// Function to check the string is ends 
-// with given substring or not
+/*
+**	FUNCTION: To check the string is ends with given substring or not
+*/
 function endsWith($string, $endString)
 {
     $len = strlen($endString);
@@ -409,6 +460,15 @@ function endsWith($string, $endString)
     }
     return (substr($string, -$len) === $endString);
 }
-  
+/*
+**	FUNCTION: Make Class Name for Laravel Migration Class
+*/
+function makeClassName($str) {
+  $frags = explode("_",$str);
+  for ($i = 0; $i < count($frags); $i++) {
+    $frags[$i] = ucfirst($frags[$i]);
+  }
+  return implode("",$frags);
+}
 
 ?>
